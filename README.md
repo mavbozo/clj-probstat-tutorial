@@ -1,12 +1,12 @@
-# Intro to Probability and Statistics
+# Tutorial on Probability and Statistics using Clojure
 
-Work in Progress for **Intro to Probability and Statistics**
+**Work-in-Progress**. I'd love to hear your feedbacks or suggestions.
 
 ## Usage
 
 See `src/index.clj` for the draft. Use clay to render the pages.
 
-The latest published draft can be read here [https://mavbozo.github.io/prostat-tutorial/clay/](https://mavbozo.github.io/prostat-tutorial/clay/)
+The latest published draft can be read here [https://mavbozo.github.io/clj-probstat-tutorial/clay/](https://mavbozo.github.io/clj-probstat-tutorial/clay/)
 
 ## License
 
