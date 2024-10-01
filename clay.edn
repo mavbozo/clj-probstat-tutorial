@@ -1,0 +1,5 @@
+{:clean-up-target-dir true
+ :quarto {:code-block-background true
+          :title "Tutorial on Probability and Statistics using Clojure"}
+ :base-source-path "src/"
+ :base-target-path "docs/clay/"}
