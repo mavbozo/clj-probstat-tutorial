@@ -24,10 +24,43 @@ We use Clojure and [fastmath](https://github.com/generateme/fastmath) version 3 
 
 # Probability
 
+In our daily lives, we often encounter situations where we don't know what will happen. Some of these situations can have a significant impact on our lives, while others simply spark our curiosity or provide us with a sense of excitement and anticipation. For example, during the rainy season, we might wonder if tomorrow's weather will leave us soaked, prompting us to prepare an umbrella beforehand. Similarly, hoping for our favorite sports team to win a game can fill us with eager anticipation. In our jobs as programmers, we may need to estimate the maximum requests per second our service can handle during peak hours so that we can allocate resources accordingly.
+
+In probability and statistics, we refer to the act of witnessing or measuring these uncertain situations as an _experiment_ or an _observation_. An experiment is considered random when we cannot predict the outcome with certainty. In contrast, a deterministic experiment is one where the result can be predicted with near certainty, such as evaluating the expression (+ 3 4) in Clojure, which will always return 7.
+
+
+## Probability Space
+
+
+### Outcomes, Sample Spaces, and Events
+
+Let's consider a classic experiment occurs in most of probability books, a coin flip experiment: we flip a coin and see whether head or tail occurs. We're doing 1 experiment or 1 trial and the possible results are head or tail. In probability theory, head or tail are possible _outcomes_ of an experiment. We could use clojure keyword to symbolize the outcomes: `:head` or `:tail`.
+
+Let's consider another experiment where we flip a coin twice in an experiment. The possible sequences of _outcomes_ are `[:head :tail]`, `[:tail :head]`, `[:tail :tail]`, and `[:head :head]`.
+
+From a particular experiment, each `outcome` is unique. An experiment yields an `outcome` for each trial. The set of all possible outcomes of an experiment is the _sample space_ which usually denoted with S or Ω (Greek capital for Omega). So for the coin flip, the S is `#{:head :tail}` and the flip-a-coin-twice experiment, the S or Ω is `#{[:head :tail] [:tail :head] [:tail :tail] [:head :head]}`.
+
+Now, we want to know whether tomorrow's maximum temperature will be 34 degrees celcius. The outcomes of the experiment depends on the range and precision of our temperature sensor device. For example, our device has temperature range from -10 to 50 degrees celcius with 0.001 precision. The sample space is `#{-10.000, -10.001, -10.002, ..... , 49.998, 49.999, 50.000}`. Compared to our coin flip experiments above, this maximum temperature experiment's sample space has more number of outcomes. In practical daily life usage, it is enough for us to know the maximum temperature in integer (ex. it's 34 degrees celcius). So, looking at the possible outcomes, we decide that we're interested to know whether tomorrow's maximum temperature is between 33.5 and 34.5 degrees celcius which is a set `#{33.500, 33.501, ..., 34.449, 34.500}`. We're interested in a subset of the outcomes.
+
+In probability theory, a subset of outcomes from an experiment is called an `event`. The distinction between `outcome` and `event` is practically useful, especially in experiments with continuous or very large sample spaces.
+
+Consider our maximum temperature experiment. The sample space contains all possible temperature readings (e.g., 33.501°C, 33.502°C, 33.503°C, etc.). However, in practical applications, we're often interested in broader categories rather than exact measurements. For instance, we might want to know the probability of the temperature being "around 34 degrees Celsius". We could define this as an event: "the maximum temperature is greater than or equal to 33.5°C and less than 34.5°C". This event would include all outcomes in the set `#{33.500, 33.501, ..., 34.499}`.
+
+In flip-a-coin-twice experiment, we might be interested in events where only 1 :head occurs like `#{[:head :tail]}` and `#{[:tail :head]}`. The event where 2 occurs is `#{[:head :head]}`. In our single coin-toss experiment, the possible events are `#{:head}` or `#{:tail}`. Events such as `#{[:head :head]}` and `#{:head}` or `#{:tail}` are events with exactly one outcome. In probability theory, an event containing exactly one outcome is called an `elementary event`.
+
+By grouping these individual outcomes into an event, we can:
+
+1. Simplify our analysis by focusing on ranges of interest rather than infinitesimal points.
+2. Account for measurement uncertainty or rounding in real-world applications.
+3. Calculate probabilities for practically meaningful scenarios.
+
+In probability theory, we assign probability to `events`.
+
+
+### Probability Model
+
 We use probability to model _random_ experiments or observations. The outcome of a _random_ experiment or observation is determined by chance and we can not predict that outcome with absolute certainty, even in principle. Examples of _random_ experiments or observations include tossing a coin, eagle sightings, tomorrow's weather, the next president of USA, _etc_.
 
-
-## Probability Model
 
 A _random_ experiment yields outcome. An event is a member of possible outcomes from an experiment. We use probability model to tell us about probability of events.
 
@@ -106,7 +139,7 @@ In the context of eagle sightings, we use `irandom` function to get a random int
 
 ::: {.printedClojure}
 ```clojure
-19
+53
 
 ```
 :::
@@ -125,7 +158,7 @@ let's take possible numbers from 10 sightings
 
 ::: {.printedClojure}
 ```clojure
-(72 76 44 18 63 8 96 78 88 94)
+(86 40 17 2 13 49 57 51 37 54)
 
 ```
 :::
@@ -219,7 +252,7 @@ Do 2 experiments
 
 ::: {.printedClojure}
 ```clojure
-86
+73
 
 ```
 :::
@@ -236,7 +269,7 @@ Do 2 experiments
 
 ::: {.printedClojure}
 ```clojure
-55
+11
 
 ```
 :::
@@ -321,7 +354,7 @@ run experiment 2 10 times
 both return identical results
 
 
-## Probability
+### Calculating Probability
 
 One way to define probability of an event is by counting. Let's take 100,000 tickets from the box, count the occurence of tickets with 7 written on them. The probability of ticket with number 7 is the count of occurrence divided by the total number of tickets picked.
 

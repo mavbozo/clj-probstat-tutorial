@@ -81,8 +81,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <ul>
   <li><a href="#probability" id="toc-probability" class="nav-link active" data-scroll-target="#probability">Probability</a>
   <ul>
+  <li><a href="#probability-space" id="toc-probability-space" class="nav-link" data-scroll-target="#probability-space">Probability Space</a>
+  <ul class="collapse">
+  <li><a href="#outcomes-sample-spaces-and-events" id="toc-outcomes-sample-spaces-and-events" class="nav-link" data-scroll-target="#outcomes-sample-spaces-and-events">Outcomes, Sample Spaces, and Events</a></li>
   <li><a href="#probability-model" id="toc-probability-model" class="nav-link" data-scroll-target="#probability-model">Probability Model</a></li>
-  <li><a href="#probability-1" id="toc-probability-1" class="nav-link" data-scroll-target="#probability-1">Probability</a></li>
+  <li><a href="#calculating-probability" id="toc-calculating-probability" class="nav-link" data-scroll-target="#calculating-probability">Calculating Probability</a></li>
+  </ul></li>
   </ul></li>
   </ul>
 </nav>
@@ -125,9 +129,30 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p><strong>Note</strong>: this is still a work in progress. I’d love to receive your feedbacks or suggestions.</p>
 <section id="probability" class="level1">
 <h1>Probability</h1>
+<p>In our daily lives, we often encounter situations where we don’t know what will happen. Some of these situations can have a significant impact on our lives, while others simply spark our curiosity or provide us with a sense of excitement and anticipation. For example, during the rainy season, we might wonder if tomorrow’s weather will leave us soaked, prompting us to prepare an umbrella beforehand. Similarly, hoping for our favorite sports team to win a game can fill us with eager anticipation. In our jobs as programmers, we may need to estimate the maximum requests per second our service can handle during peak hours so that we can allocate resources accordingly.</p>
+<p>In probability and statistics, we refer to the act of witnessing or measuring these uncertain situations as an <em>experiment</em> or an <em>observation</em>. An experiment is considered random when we cannot predict the outcome with certainty. In contrast, a deterministic experiment is one where the result can be predicted with near certainty, such as evaluating the expression (+ 3 4) in Clojure, which will always return 7.</p>
+<section id="probability-space" class="level2">
+<h2 class="anchored" data-anchor-id="probability-space">Probability Space</h2>
+<section id="outcomes-sample-spaces-and-events" class="level3">
+<h3 class="anchored" data-anchor-id="outcomes-sample-spaces-and-events">Outcomes, Sample Spaces, and Events</h3>
+<p>Let’s consider a classic experiment occurs in most of probability books, a coin flip experiment: we flip a coin and see whether head or tail occurs. We’re doing 1 experiment or 1 trial and the possible results are head or tail. In probability theory, head or tail are possible <em>outcomes</em> of an experiment. We could use clojure keyword to symbolize the outcomes: <code>:head</code> or <code>:tail</code>.</p>
+<p>Let’s consider another experiment where we flip a coin twice in an experiment. The possible sequences of <em>outcomes</em> are <code>[:head :tail]</code>, <code>[:tail :head]</code>, <code>[:tail :tail]</code>, and <code>[:head :head]</code>.</p>
+<p>From a particular experiment, each <code>outcome</code> is unique. An experiment yields an <code>outcome</code> for each trial. The set of all possible outcomes of an experiment is the <em>sample space</em> which usually denoted with S or Ω (Greek capital for Omega). So for the coin flip, the S is <code>#{:head :tail}</code> and the flip-a-coin-twice experiment, the S or Ω is <code>#{[:head :tail] [:tail :head] [:tail :tail] [:head :head]}</code>.</p>
+<p>Now, we want to know whether tomorrow’s maximum temperature will be 34 degrees celcius. The outcomes of the experiment depends on the range and precision of our temperature sensor device. For example, our device has temperature range from -10 to 50 degrees celcius with 0.001 precision. The sample space is <code>#{-10.000, -10.001, -10.002, ..... , 49.998, 49.999, 50.000}</code>. Compared to our coin flip experiments above, this maximum temperature experiment’s sample space has more number of outcomes. In practical daily life usage, it is enough for us to know the maximum temperature in integer (ex. it’s 34 degrees celcius). So, looking at the possible outcomes, we decide that we’re interested to know whether tomorrow’s maximum temperature is between 33.5 and 34.5 degrees celcius which is a set <code>#{33.500, 33.501, ..., 34.449, 34.500}</code>. We’re interested in a subset of the outcomes.</p>
+<p>In probability theory, a subset of outcomes from an experiment is called an <code>event</code>. The distinction between <code>outcome</code> and <code>event</code> is practically useful, especially in experiments with continuous or very large sample spaces.</p>
+<p>Consider our maximum temperature experiment. The sample space contains all possible temperature readings (e.g., 33.501°C, 33.502°C, 33.503°C, etc.). However, in practical applications, we’re often interested in broader categories rather than exact measurements. For instance, we might want to know the probability of the temperature being “around 34 degrees Celsius”. We could define this as an event: “the maximum temperature is greater than or equal to 33.5°C and less than 34.5°C”. This event would include all outcomes in the set <code>#{33.500, 33.501, ..., 34.499}</code>.</p>
+<p>In flip-a-coin-twice experiment, we might be interested in events where only 1 :head occurs like <code>#{[:head :tail]}</code> and <code>#{[:tail :head]}</code>. The event where 2 occurs is <code>#{[:head :head]}</code>. In our single coin-toss experiment, the possible events are <code>#{:head}</code> or <code>#{:tail}</code>. Events such as <code>#{[:head :head]}</code> and <code>#{:head}</code> or <code>#{:tail}</code> are events with exactly one outcome. In probability theory, an event containing exactly one outcome is called an <code>elementary event</code>.</p>
+<p>By grouping these individual outcomes into an event, we can:</p>
+<ol type="1">
+<li>Simplify our analysis by focusing on ranges of interest rather than infinitesimal points.</li>
+<li>Account for measurement uncertainty or rounding in real-world applications.</li>
+<li>Calculate probabilities for practically meaningful scenarios.</li>
+</ol>
+<p>In probability theory, we assign probability to <code>events</code>.</p>
+</section>
+<section id="probability-model" class="level3">
+<h3 class="anchored" data-anchor-id="probability-model">Probability Model</h3>
 <p>We use probability to model <em>random</em> experiments or observations. The outcome of a <em>random</em> experiment or observation is determined by chance and we can not predict that outcome with absolute certainty, even in principle. Examples of <em>random</em> experiments or observations include tossing a coin, eagle sightings, tomorrow’s weather, the next president of USA, <em>etc</em>.</p>
-<section id="probability-model" class="level2">
-<h2 class="anchored" data-anchor-id="probability-model">Probability Model</h2>
 <p>A <em>random</em> experiment yields outcome. An event is a member of possible outcomes from an experiment. We use probability model to tell us about probability of events.</p>
 <p>One good way to think about probability model is a ticket-in-a-box model or “box-model”, for short. This box-model replaces an observation by a box full of tickets. Each ticket has an outcome written on it. The outcome or the event written could be “head” or “tail” from tossing a coin, number of eagles seen – it depends on what we’re trying to model. All possible events are written at least once among the tickets. Some events may appear on many tickets. The tickets are thoroughly mixed in that box. We get an outcome of an experiment by picking a ticket from the box and see what’s written on it.</p>
 <p>Let’s consider eagle sightings observation whose outcome is the number of eagles seen on a particular day. The event could 0 eagles seen, 1 eagle seen, or 7 eagles seen, etc. Using box-model, the box is the experiment and the number written on any tickets could be integers: 0, 1, 2, 3, .. etc. We then pick a ticket from the box, see the number written on the ticket that tells us the number of eagles seen for that particular day.</p>
@@ -160,14 +185,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="sourceCode" id="cb6"><pre class="sourceCode clojure code-with-copy"><code class="sourceCode clojure"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>(r/irandom prng0 <span class="dv">0</span> <span class="dv">101</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="printedClojure">
-<div class="sourceCode" id="cb7"><pre class="sourceCode clojure code-with-copy"><code class="sourceCode clojure"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="dv">19</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode clojure code-with-copy"><code class="sourceCode clojure"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="dv">53</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>let’s take possible numbers from 10 sightings</p>
 <div class="sourceClojure">
 <div class="sourceCode" id="cb8"><pre class="sourceCode clojure code-with-copy"><code class="sourceCode clojure"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>(<span class="kw">repeatedly</span> <span class="dv">10</span> (<span class="kw">fn</span> [] (r/irandom prng0 <span class="dv">0</span> <span class="dv">101</span>)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="printedClojure">
-<div class="sourceCode" id="cb9"><pre class="sourceCode clojure code-with-copy"><code class="sourceCode clojure"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>(<span class="dv">72</span> <span class="dv">76</span> <span class="dv">44</span> <span class="dv">18</span> <span class="dv">63</span> <span class="dv">8</span> <span class="dv">96</span> <span class="dv">78</span> <span class="dv">88</span> <span class="dv">94</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb9"><pre class="sourceCode clojure code-with-copy"><code class="sourceCode clojure"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>(<span class="dv">86</span> <span class="dv">40</span> <span class="dv">17</span> <span class="dv">2</span> <span class="dv">13</span> <span class="dv">49</span> <span class="dv">57</span> <span class="dv">51</span> <span class="dv">37</span> <span class="dv">54</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>PRNGs produce deterministic streams of output by having some kind of internal state. In Clojure parlance, PRNGs are stateful. During the course of its execution, a PRNG’s state follow the same path of changes. We can set the initial state of a PRNG by specifying a state <code>seed</code>. Instances of a prng with the same algorithm and the same <code>seed</code>, produce identical stream of outputs because those instances are deterministic and start from the same state.</p>
 <p>Let’s create 2 Mersenne-Twister PRNGs with the same <code>seed</code> 42.</p>
@@ -206,13 +231,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="sourceCode" id="cb17"><pre class="sourceCode clojure code-with-copy"><code class="sourceCode clojure"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>(eagle-sightings)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="printedClojure">
-<div class="sourceCode" id="cb18"><pre class="sourceCode clojure code-with-copy"><code class="sourceCode clojure"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="dv">86</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb18"><pre class="sourceCode clojure code-with-copy"><code class="sourceCode clojure"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="dv">73</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="sourceClojure">
 <div class="sourceCode" id="cb19"><pre class="sourceCode clojure code-with-copy"><code class="sourceCode clojure"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>(eagle-sightings)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="printedClojure">
-<div class="sourceCode" id="cb20"><pre class="sourceCode clojure code-with-copy"><code class="sourceCode clojure"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="dv">55</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb20"><pre class="sourceCode clojure code-with-copy"><code class="sourceCode clojure"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="dv">11</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>By using this box model implemented through codes and running in our computer, we mimic the experiment done in the real world. We can run this experiment many times and do further analysis to the model. There’s still a problem that we haven’t shown that this model behave like the real world experiment. We’ll tackle that problem further in this tutorial.</p>
 <p>We can create reproducible model. We can imagine doing experiment with a box and then giving the box to another person. That person will have same sequence of tickets drawn from the box. By using seed, we can ensure the model produce reproducible results. Let’s make a <code>generate-eagle-sightings-box</code> which given same <code>seed</code>, returns reproducible eagle sightings experiment.</p>
@@ -249,8 +274,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <p>both return identical results</p>
 </section>
-<section id="probability-1" class="level2">
-<h2 class="anchored" data-anchor-id="probability-1">Probability</h2>
+<section id="calculating-probability" class="level3">
+<h3 class="anchored" data-anchor-id="calculating-probability">Calculating Probability</h3>
 <p>One way to define probability of an event is by counting. Let’s take 100,000 tickets from the box, count the occurence of tickets with 7 written on them. The probability of ticket with number 7 is the count of occurrence divided by the total number of tickets picked.</p>
 <p>Generate a box with seed 1234</p>
 <div class="sourceClojure">
@@ -299,6 +324,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>With large amount of trials, the probability for a 7 outcome is about 0.01.</p>
 <div style="background-color:grey;height:2px;width:100%;"></div>
 <div><pre><small><small>source: src/index.clj</small></small></pre></div>
+</section>
 </section>
 </section>
 
