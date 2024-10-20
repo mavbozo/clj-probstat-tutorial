@@ -2,4 +2,6 @@
  :deps {org.clojure/clojure {:mvn/version "1.11.3"}
         generateme/fastmath {:mvn/version "3.0.0-alpha1"}
         org.scicloj/clay {:mvn/version "2-beta16"}
-        scicloj/tablecloth {:mvn/version "7.029.2"}}}
+        scicloj/tablecloth {:mvn/version "7.029.2"}
+        scicloj/clojisr {:mvn/version "1.0.0"}
+        criterium/criterium {:mvn/version "0.4.6"}}}

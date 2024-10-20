@@ -1,7 +1,12 @@
 ^:kindly/hide-code
 (ns index
-  (:require [fastmath.random :as r]
-            [scicloj.kindly.v4.kind :as kind]))
+  (:require
+   [clojure.java.io :as io]
+   [fastmath.core :as m]
+   [fastmath.random :as r]
+   [scicloj.kindly.v4.kind :as kind]
+   [tablecloth.api :as tc]
+   [ggplot :as gg]))
 
 ;; This tutorial assumes some familiarity with Clojure and with high-school maths (algebra, probability, statistics, _etc_.).
 
@@ -15,13 +20,13 @@
 
 ;; In probability and statistics, we refer to the act of witnessing or measuring these uncertain situations as an _experiment_ or an _observation_. An experiment is considered random when we cannot predict the outcome with certainty. In contrast, a deterministic experiment is one where the result can be predicted with near certainty, such as evaluating the expression (+ 3 4) in Clojure, which will always return 7.
 
-;; ## Probability Space
+;; Probability of these uncertain situations are scaled between 0% and 100%. The higher the probability, the more likely a situation to occur. A weather report telling us there's a 80% probability of raining tomorrow make us more ready to bring an umbrella tomorrow compared to report telling us 30% probability of raining. Similarly, a 80% chance for our local sports team to win might bring us a sense of calm when watching them play compared to cautious feeling if the probability of winning is just 30%.
 
-;; ### Outcomes, Sample Spaces, and Events
+;; ## Probability Space
 
 ;; Let's consider a classic experiment occurs in most of probability books, a coin flip experiment: we flip a coin and see whether head or tail occurs. We're doing 1 experiment or 1 trial and the possible results are head or tail. In probability theory, head or tail are possible _outcomes_ of an experiment. We could use clojure keyword to symbolize the outcomes: `:head` or `:tail`.
 
-;; Let's consider another experiment where we flip a coin twice in an experiment. The possible sequences of _outcomes_ are `[:head :tail]`, `[:tail :head]`, `[:tail :tail]`, and `[:head :head]`.
+;; Let's consider another experiment where we flip a coin twice in an experiment. The possible sequences of _outcomes_ are ordered-pairs `[:head :tail]`, `[:tail :head]`, `[:tail :tail]`, and `[:head :head]`.
 
 ;; From a particular experiment, each `outcome` is unique. An experiment yields an `outcome` for each trial. The set of all possible outcomes of an experiment is the _sample space_ which usually denoted with S or Ω (Greek capital for Omega). So for the coin flip, the S is `#{:head :tail}` and the flip-a-coin-twice experiment, the S or Ω is `#{[:head :tail] [:tail :head] [:tail :tail] [:head :head]}`.
 
@@ -33,26 +38,171 @@
 
 ;; In flip-a-coin-twice experiment, we might be interested in events where only 1 :head occurs like `#{[:head :tail]}` and `#{[:tail :head]}`. The event where 2 occurs is `#{[:head :head]}`. In our single coin-toss experiment, the possible events are `#{:head}` or `#{:tail}`. Events such as `#{[:head :head]}` and `#{:head}` or `#{:tail}` are events with exactly one outcome. In probability theory, an event containing exactly one outcome is called an `elementary event`.
 
-;; By grouping these individual outcomes into an event, we can:
-;; 
-;; 1. Simplify our analysis by focusing on ranges of interest rather than infinitesimal points.
-;; 2. Account for measurement uncertainty or rounding in real-world applications.
-;; 3. Calculate probabilities for practically meaningful scenarios.
+;; In a coin flip experiment with a fair coin where we expect both head and tail equally likely to happen, we assign both outcomes with equal probability 50%.
 
-;; In probability theory, we assign probability to `events`.
+;; ## Tickets in a Box Model
 
-;; ### Probability Model
+;; We can simulate _random_ experiments in our computers. We can, programmatically, create a model of _random_ experiment and run simulations with it. The model should be small enough to capture relevant aspects of a _random_ experiment which are things we have learned: the outcomes, sample space, events, and probabilities.
 
-;; We use probability to model _random_ experiments or observations. The outcome of a _random_ experiment or observation is determined by chance and we can not predict that outcome with absolute certainty, even in principle. Examples of _random_ experiments or observations include tossing a coin, eagle sightings, tomorrow's weather, the next president of USA, _etc_.
+;; We will use a ticket-in-a-box model or "box-model", for short. The box contains tickets and each ticket has an outcome written on it. The outcome written could be "head" or "tail" from tossing a coin, "win" or "lose" or "draw" from a sports match between 2 teams, or all possible temperature readings from maximum temperatur experiment -- it depends on the random experiment. All possible outcomes are written at least once among the tickets. Some outcomes may appear on many tickets. The tickets are thoroughly mixed in that box. Doing an experiment means we pick a ticket from the box and the outcome of the experiment is what is written on the ticket.
+
+;; An outcome with more written tickets has more probability than other outcomes with lesser tickets. 
+
+;; <blockquote src="https://stats.stackexchange.com/a/54894">Instead of actually conducting the experiment, we imagine thoroughly--but blindly--mixing all the tickets and selecting just one. If we can show that the real experiment should behave as if it were conducted in this way, then we have reduced a potentially complicated (and expensive, and lengthy) real-world experiment to a simple, intuitive, thought experiment (or "statistical model"). The clarity and simplicity afforded by this model makes it possible to analyze the experiment.</blockquote>
+;; source [https://stats.stackexchange.com/a/54894](https://stats.stackexchange.com/a/54894)
+
+;; Let's create a box for our flip-a-coin experiment. The box is a clojure function `flip-a-coin-box` which, when called, simulates the act of picking a ticket from a box. The `flip-a-coin-box` returns :head or :tail which are the outcomes written on tickets.
+
+;; For example:
+^:kindly/hide-code (kind/code "(flip-a-coin-box) => :head")
+^:kindly/hide-code (kind/code "(flip-a-coin-box) => :tail")
+
+;; We use a fair coin in our experiment, so we need to ensure that when we pick a ticket from the box, :head and :tail tickets have equal chance to be picked. We can use the help of a macro `randval` in `fastmath.random` namespace, which given arguments 0.5, :head, :tail, will return :head or :tail with equal chance 50%.
+
+^:kindly/hide-code (kind/code "(require '[fastmath.random :as r])")
+
+(defn flip-a-coin-box []
+  (r/randval 0.5 :head :tail))
+
+;; let's do experiment 5 times
+
+(repeatedly 5 flip-a-coin-box)
+
+;; It's important to understand that when we use `repeatedly` with our `flip-a-coin-box` function, 
+;; we're not flipping the same coin 5 times in sequence. Instead, we're simulating 5 _independent_
+;; trials of the experiment.
+
+;; We can think of this in two ways:
+
+;; 1. Independent Trials: Each call to `flip-a-coin-box` is an independent event. 
+;;    It's as if we have 5 different people, each with their own coin, flipping once simultaneously.
+
+;; 2. Parallel Universes: Imagine we have 5 parallel universes, each identical up to the point 
+;;    of the coin flip. In each universe, the coin is flipped once. We then collect the results 
+;;    from all these universes.
+
+;; This distinction is crucial in probability theory. The outcome of one flip doesn't influence 
+;; the others, maintaining the 50/50 chance for each flip regardless of previous results.
+
+;; ## Easy Probability Estimation
+
+;; Let's estimate the probability for :head result solely based the result of the trials from our `flip-a-coin-box`. One way of estimating the probabilty for :head is by counting the :head occurrance and divide that from the total number of trials.
+
+(defn estimate-head
+  "return probability for :head from n trials"
+  [n]
+  (let [xf (comp (filter #(= % :head)) (map (fn [x] (if (= x :head) 1 0))))
+        nhead (transduce xf + (repeatedly n flip-a-coin-box))]
+    (double (m// (double nhead) n))))
+
+;; from 10 trials
+
+(str "estimated probability for head from 10 trials: " (estimate-head 10))
+
+(comment
+#_ comment-start
+
+(require '[criterium.core :refer [bench quick-bench]])
+
+(quick-bench (estimate-head 10000))
+
+(quick-bench (estimate-head-optimized 10000))
+
+(repeatedly 10 #(r/randval 0.5 :high :low))
+
+(def ds0 (tc/dataset {:x (range 5)
+                      :y (range 5)}))
+
+(require '[fastmath.vector :as v])
+
+(v/add [1 2 3] [1 2 3])
+
+(v/add (:y ds0) (range 5))
+
+(v/add (:y ds0) (range 5))
+
+(v/add (range 5) (:y ds0))
+
+#_ comment-end)
 
 
-;; A _random_ experiment yields outcome. An event is a member of possible outcomes from an experiment. We use probability model to tell us about probability of events.
 
-;; One good way to think about probability model is a ticket-in-a-box model or "box-model", for short. This box-model replaces an observation by a box full of tickets. Each ticket has an outcome written on it. The outcome or the event written could be "head" or "tail" from tossing a coin, number of eagles seen -- it depends on what we're trying to model. All possible events are written at least once among the tickets. Some events may appear on many tickets. The tickets are thoroughly mixed in that box. We get an outcome of an experiment by picking a ticket from the box and see what's written on it.
+;; let's that 10 more times
+
+^:kindly/hide-code (repeatedly 10 #(str "estimated probability for head from 10 trials: " (estimate-head 10)))
+
+;; Many estimates are close but not exactly 0.5. What if we use 100 trials.
+
+(str "estimated probability for head from 100 trials: " (estimate-head 100))
+
+;; which is closer than doing 10 trials. So, let's doing 100 trials again a few times
+
+^:kindly/hide-code (repeatedly 10 #(str "estimated probability for head from 100 trials: " (estimate-head 100)))
+
+;; what happen if we have 10,000 trials
+
+^:kindly/hide-code (repeatedly 5 #(str "estimated probability for head from 10000 trials: " (estimate-head 10000)))
+
+;; Now, the estimates are really close to the true value 50%.
+
+;; ### Law of Large Numbers
+
+;; We create the dataset containing the number of experiments and the estimated probability for head from the last chapter. We use tablecloth library to create the dataset.
+
+(defn estimate-head-optimized
+  "return probability for :head from n trials"
+  [n]
+  (let [head-count (loop [i 0
+                          count 0]
+                     (if (< i n)
+                       (recur (inc i)
+                              (if (= (flip-a-coin-box) :head)
+                                (inc count)
+                                count))
+                       count))]
+    (double (/ head-count n))))
+
+(let [ns [5 10 100 1000 10000 100000]
+      ps (mapv estimate-head-optimized ns)]
+  (tc/dataset {:n ns :p ps} {:dataset-name "Estimated head probability p from n experiments"}))
+
+
+;; As we can see, the more we repeat the experiments, the closer we are to the true value of 50%. How many experiments do we need so that we can be confident of our estimation.
+
+;; We'll visualize this with a plot. We're going to run 1 to 100,000 experiments and store the result in a dataset.
+
+;; (time
+;;  (def dataset (tc/dataset {:n (range 1 100001) :p (into [] (pmap estimate-head-optimized (range 1 100001)))})))
+
+(def dataset (tc/dataset (io/file "test.csv") {:key-fn keyword}))
+
+(def dataset1 (clojure.set/rename-keys dataset {:n :x :p :y}))
+
+(gg/->image (gg/line-plot dataset1))
+
+;; The plot shows that the larger the number of experiments, the closer our estimation to 50%. We can see it with more clarity if we use logarithmic scale for the x axis.
+
+(gg/->image (gg/line-plot-log-x-scale dataset1))
+
+;; We've observed that as we increase the number of coin flips, our estimated probability for getting heads converges towards 0.5 (or 50%). This phenomenon is a practical demonstration of the Law of Large Numbers (LLN), one of the fundamental principles in probability theory and statistics.
+
+;; The Law of Large Numbers states that as we increase the number of trials of an independent experiment, the average of the results tends to converge to true value. So, in our coin-flipping experiment:
+
+;; 1. Each flip is an independent trial
+;; 2. The result of each trial is either head or tail
+;; 3. We are interested in a trial whose result is head
+;; 4. In a number of trials, the average result is the count of the occurrence of head divided by the number of trials.
+;;    In our case, the average result is the estimated probability of heads.
+;; 5. As we increase the number of flips, the estimated probability of heads gets closer to 0.5
+
+
+;; ### Central Limit Theorem
+
+;; ### More Tickets in a Box Examples
 
 ;; Let's consider eagle sightings observation whose outcome is the number of eagles seen on a particular day. The event could 0 eagles seen, 1 eagle seen, or 7 eagles seen, etc. Using box-model, the box is the experiment and the number written on any tickets could be integers: 0, 1, 2, 3, .. etc. We then pick a ticket from the box, see the number written on the ticket that tells us the number of eagles seen for that particular day.
 
-;; We're going to create the eagle sightings box using Clojure and fastmath library. We want to make a function `eagle-sightings` which simulates the act of picking a ticket from a box and that function returns the event or number written on a picked ticket.
+;; We're going to create the eagle sightings box using Clojure and fastmath library. We want to make a function `eagle-sightings` which simulates the act of picking a ticket from a box and that function returns the outcome or number written on a picked ticket.
 
 ;; For example:
 ^:kindly/hide-code (kind/code "(eagle-sightings) => 1 ;; 1 eagle seen")
