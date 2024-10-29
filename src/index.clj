@@ -5,8 +5,9 @@
    [fastmath.core :as m]
    [fastmath.random :as r]
    [scicloj.kindly.v4.kind :as kind]
+   [scicloj.tableplot.v1.hanami :as hanami]
    [tablecloth.api :as tc]
-   [ggplot :as gg]))
+   [scicloj.tableplot.v1.plotly :as plotly]))
 
 ;; This tutorial assumes some familiarity with Clojure and with high-school maths (algebra, probability, statistics, _etc_.).
 
@@ -42,116 +43,273 @@
 
 ;; ## Tickets in a Box Model
 
-;; We can simulate _random_ experiments in our computers. We can, programmatically, create a model of _random_ experiment and run simulations with it. The model should be small enough to capture relevant aspects of a _random_ experiment which are things we have learned: the outcomes, sample space, events, and probabilities.
+;; We can simulate _random_ experiments in our computers. We can, programmatically, create a model of _random_ experiment and run the model simulations in our computer. The model should be small enough to capture relevant aspects of a _random_ experiment we have learned: the outcomes, sample space, events, and probabilities.
 
-;; We will use a ticket-in-a-box model or "box-model", for short. The box contains tickets and each ticket has an outcome written on it. The outcome written could be "head" or "tail" from tossing a coin, "win" or "lose" or "draw" from a sports match between 2 teams, or all possible temperature readings from maximum temperatur experiment -- it depends on the random experiment. All possible outcomes are written at least once among the tickets. Some outcomes may appear on many tickets. The tickets are thoroughly mixed in that box. Doing an experiment means we pick a ticket from the box and the outcome of the experiment is what is written on the ticket.
+;; We will use a tickets-in-a-box model or "box model", for short. The box contains tickets and each ticket has an outcome written on it. The outcome written could be "head" or "tail" from tossing a coin, "win" or "lose" or "draw" from a sports match between 2 teams, or all possible temperature readings from maximum temperatur experiment -- it depends on the random experiment. Every potential outcome is represented on at least one ticket in the box. Certain outcomes might be found on multiple tickets. We can imagine that we shake the box to ensure that the tickets inside are randomly shuffled thus each individual ticket are equally likely to be selected. Doing an experiment means we pick a ticket from the box and then see what is written on the ticket to know the outcome.
 
-;; An outcome with more written tickets has more probability than other outcomes with lesser tickets. 
+;; In this box model, the probability of an outcome is the amount of tickets with that outcome written on them, divided by total amount of all tickets. The proportions of each outcomes written relative to the total number of tickets defines the probability property of a box. An outcome with more written tickets has more probability than other outcomes with lesser tickets. Intuitively, we are more likely to pick a ticket with higher outcome proportion. For example, a box with 7 head tickets and 3 tail tickets has same probability property like a box with 7 millions head tickets and 3 millions tail tickets and we are more likely to pick a head ticket from the box.
 
-;; <blockquote src="https://stats.stackexchange.com/a/54894">Instead of actually conducting the experiment, we imagine thoroughly--but blindly--mixing all the tickets and selecting just one. If we can show that the real experiment should behave as if it were conducted in this way, then we have reduced a potentially complicated (and expensive, and lengthy) real-world experiment to a simple, intuitive, thought experiment (or "statistical model"). The clarity and simplicity afforded by this model makes it possible to analyze the experiment.</blockquote>
-;; source [https://stats.stackexchange.com/a/54894](https://stats.stackexchange.com/a/54894)
+;; Let's create a box for our flip-a-coin experiment. The outcomes are `:head` or `:tail`. We assume we're using fair coin, so the proportions of head and tail are the same. We use 5 tickets for each outcome.
 
-;; Let's create a box for our flip-a-coin experiment. The box is a clojure function `flip-a-coin-box` which, when called, simulates the act of picking a ticket from a box. The `flip-a-coin-box` returns :head or :tail which are the outcomes written on tickets.
+[:head :head :head :head :head
+ :tail :tail :tail :tail :tail] 
 
-;; For example:
-^:kindly/hide-code (kind/code "(flip-a-coin-box) => :head")
-^:kindly/hide-code (kind/code "(flip-a-coin-box) => :tail")
+;; Doing the experiment means we properly shake the box then pick a ticket. In our implementation, we use `clojure.core/rand-nth` function to simulate the acts of shuffling the box and pick a random ticket. We also don't remove the ticket from the box collection to simulate the act of putting the picked ticket back to the box. We create a function `fair-coin-box` where calling that function means we shake the box, pick a random ticket, then put the ticket in the box. The return value of the function is the outcome written on a ticket.
 
-;; We use a fair coin in our experiment, so we need to ensure that when we pick a ticket from the box, :head and :tail tickets have equal chance to be picked. We can use the help of a macro `randval` in `fastmath.random` namespace, which given arguments 0.5, :head, :tail, will return :head or :tail with equal chance 50%.
+(defn fair-coin-box
+  "Simulates shaking a box then pick a random ticket from the box then put the ticket back in the box.
+   The return value is what's written on the picked ticket.
+   Since we're using an immutable vector, this implicitly models:
+   1. Random selection from all tickets
+   2. Box always remains in original state for next pick"
+  []
+  (let [tickets [:head :head :head :head :head
+                 :tail :tail :tail :tail :tail]]
+    (rand-nth tickets)))
 
-^:kindly/hide-code (kind/code "(require '[fastmath.random :as r])")
+;; Let's do 1 trial
+(fair-coin-box)
 
-(defn flip-a-coin-box []
-  (r/randval 0.5 :head :tail))
+;; Let's do 5 trials
+(repeatedly 5 #(fair-coin-box))
 
-;; let's do experiment 5 times
+;; If we do a large number of trials, the proportions of picked tickets should be close to 50% head and 50% tail. The results approximately reflects the probability property of that box.
 
-(repeatedly 5 flip-a-coin-box)
+(frequencies (repeatedly 1000 #(fair-coin-box)))
 
-;; It's important to understand that when we use `repeatedly` with our `flip-a-coin-box` function, 
-;; we're not flipping the same coin 5 times in sequence. Instead, we're simulating 5 _independent_
-;; trials of the experiment.
+;; ## Independence
 
-;; We can think of this in two ways:
+;; It's important to understand that when we use `repeatedly` with our `fair-coin-box`, each call is an `independent` trial.  The _independence_ comes from each `rand-nth` returns a random element from the vector of tickets, independent of previous picks. _Independent_ means the probability of getting a head (or tail) on any given trial is always 0.5, regardless of what happened in any other trials.
 
-;; 1. Independent Trials: Each call to `flip-a-coin-box` is an independent event. 
-;;    It's as if we have 5 different people, each with their own coin, flipping once simultaneously.
+;; This idea about _independence_ is important because, for example, in our flip-a-coin experiment with fair coin, there are some misconceptions such as:
 
-;; 2. Parallel Universes: Imagine we have 5 parallel universes, each identical up to the point 
-;;    of the coin flip. In each universe, the coin is flipped once. We then collect the results 
-;;    from all these universes.
+;; 1. "After seeing three heads in a row, tails is more likely to come up next to balance things out"
+;; 2. "If I've seen more heads than tails so far, the next few flips should more likely to return tails to even things up"
 
-;; This distinction is crucial in probability theory. The outcome of one flip doesn't influence 
-;; the others, maintaining the 50/50 chance for each flip regardless of previous results.
+;; Let's focus on the simplest case that after 2 trial, the probability of seeing :head in the second trial is still 0.5, even after the first trial results in :head. We'll do the 2 trial 1000 times.
 
-;; ## Easy Probability Estimation
+(defn two-fair-coin-trials []
+  [(fair-coin-box) (fair-coin-box)])
 
-;; Let's estimate the probability for :head result solely based the result of the trials from our `flip-a-coin-box`. One way of estimating the probabilty for :head is by counting the :head occurrance and divide that from the total number of trials.
+(let [two-trials (repeatedly 1000 #(two-fair-coin-trials))]
+  ;; Even if we know the first pick was head,
+  ;; the second pick still has 50/50 chance
+  (->> two-trials
+       (filter #(= :head (first %)))
+       (map second)
+       frequencies))
 
-(defn estimate-head
-  "return probability for :head from n trials"
-  [n]
-  (let [xf (comp (filter #(= % :head)) (map (fn [x] (if (= x :head) 1 0))))
-        nhead (transduce xf + (repeatedly n flip-a-coin-box))]
-    (double (m// (double nhead) n))))
+;; This notion of independence is crucial in probability theory. The outcome of one trial doesn't influence the others. In above example, even after picking head, the count of :head and :tail are almost the same. There's no bias to :tail after a :head result.
 
-;; from 10 trials
+;; ## Reproducible Model
 
-(str "estimated probability for head from 10 trials: " (estimate-head 10))
+;; Imagine that you have a fair-coin and after doing an experiment by flipping the coin 10 times, you believe you have found a fascinating pattern. You tell your colleague, "Hey, I flipped this coin 10 times and got this fascinating pattern!". But, when your colleague replicate your experiment, they get completely different result. How can they verify your experiment?
 
-(comment
-#_ comment-start
+;; In game development, we might develop a gameplay with random elements and we encounter a bug. Without reproducibility randomness, it would be nearly impossible for other developers to recreate and fix the problems.
 
-(require '[criterium.core :refer [bench quick-bench]])
+;; Let's go back to our `fair-coin-box` function implementation above.
 
-(quick-bench (estimate-head 10000))
+(defn fair-coin-box
+  []
+  (let [tickets [:head :head :head :head :head
+                 :tail :tail :tail :tail :tail]]
+    (rand-nth tickets)))
 
-(quick-bench (estimate-head-optimized 10000))
+;; We can imagine giving this box to our colleague but they'll get different result when calling this function 10 times.
 
-(repeatedly 10 #(r/randval 0.5 :high :low))
+;; Our trials
+(repeatedly 10 #(fair-coin-box))
 
-(def ds0 (tc/dataset {:x (range 5)
-                      :y (range 5)}))
+;; Our colleague trials
+(repeatedly 10 #(fair-coin-box))
 
-(require '[fastmath.vector :as v])
+;; Now, what if we can, somehow, make a box that still give us a random ticket when picked, but returns reproducible result? Back to our initial implementation for our fair-coin-box and we see that the key is the `rand-nth` function. For our purpose, `rand-nth` picks an element from a random index of our vector of tickets. We could make a function which reproducibly generate a random index from our vector or we generalize and create a function that reproducibly generates a random number then we convert the produced random number to an index of our vector.
 
-(v/add [1 2 3] [1 2 3])
+;; A function which generates a random number is called a Random Number Generator (RNG) in computer science. For our need of reproducible experiment, we're going to use Pseudo RNG or PRNG for short. PRNG when called multiple times will return a sequence of numbers that _appears_ to be random. This PRNG is stateful and deterministic which means given same initial state, it will continually produce same sequence of _pseudo_ random numbers.
 
-(v/add (:y ds0) (range 5))
+;; Let's implement a simple PRNG called Linear Congruential Generator (LCG). The formula is:
 
-(v/add (:y ds0) (range 5))
+^:kindly/hide-code (kind/tex "X_{n+1} = (a * X_n + c) \\mod m \\text{ where } n \\geq 0")
 
-(v/add (range 5) (:y ds0))
+^:kindly/hide-code (kind/tex "m \\text{ the modulus, }  0 < m")
 
-#_ comment-end)
+^:kindly/hide-code (kind/tex "a \\text{ the multiplier, }  0 \\leq a < m")
+
+^:kindly/hide-code (kind/tex "c \\text{ the increment, }  0 \\leq c < m")
+
+^:kindly/hide-code (kind/tex "X_0 \\text{ the starting value, }  0 \\leq X_0 < m")
+
+;; Here's one implementation. `make-lcg` accepts the parameters and return a function to generate a random number. The implentation uses a closure that wraps an atom so that the function "remembers" the Xn to be returned.
+(defn make-lcg
+  "Returns a lcg function."
+  [{:keys [X0 a c m]}]
+  (let [state (atom X0)]
+    (fn []
+      (let [Xn @state
+            Xn+1 (mod (+ (* a Xn) c) m)]
+        (reset! state Xn+1)         ; Update the state
+        Xn))))
+
+(def lcg-0 (make-lcg {:X0 7 :a 7 :c 7 :m 10}))
+
+;; let's generate a sequence of 20 numbers
+
+(repeatedly 20 lcg-0)
+;; => (7 6 9 0 7 6 9 0 7 6)
+
+;; As we can see the result is a periodic sequence of 7, 6, 9, 0, then it repeats again. Mathematically inclined readers will quickly realize that there is a period of numbers because of the use of modulus in LCG formula and we choose 10 as our m. The choice of X0, a, m, and c determines the period of the generated sequence of numbers before it cycles again. It is the property of LCG that it produces a periodic sequence of _pseudo_ random numbers. We're going to choose sufficiently large m and combination of a and c to make our period large enough so we can generate many many random numbers before the numbers form a new period.
+
+;; We're going to use m = 2^48, c = 11, a = 25214903917, which are parameters used in java.util.Random according to wikipedia (https://en.wikipedia.org/wiki/Linear_congruential_generator)
+
+(def lcg-1 (make-lcg {:X0 2007 :c 25214903917 :a 11
+                      :m (Math/pow 2 48)}))
+
+(repeatedly 20 lcg-1)
+
+;; The number is too large, we could create another functionlcg-rand whose input is the lcg function and the modulus and returns random number between 0 and 1. We just divides the number returned from lcg with the m.
+
+(defn lcg-rand
+  "returns random number between 0 and 1"
+  [lcg m]
+  (/ (double (lcg)) m))
 
 
+(repeatedly 20 #(lcg-rand lcg-0 (Math/pow 2 48)))
 
-;; let's that 10 more times
+(repeatedly 20 #(lcg-rand lcg-1 (Math/pow 2 48)))
 
-^:kindly/hide-code (repeatedly 10 #(str "estimated probability for head from 10 trials: " (estimate-head 10)))
+;; A visualization might help us see the randomness of lcg-0 and lcg-1. Using lcg-rand to generate random numbers, we're going to plot each number against the next number in the sequence (X,Y) = (Xn, Xn+1)
 
-;; Many estimates are close but not exactly 0.5. What if we use 100 trials.
+(defn plot-lcg
+  [lcg m]
+  (let [pairs (->> (repeatedly 1000 #(lcg-rand lcg m))
+                   (partition 2))  
+        ds (tc/dataset pairs {:column-names [:x :y]})]
+    (hanami/plot ds
+                 hanami/point-chart
+                 {:=x :x :=y :y})))
 
-(str "estimated probability for head from 100 trials: " (estimate-head 100))
+;; `lcg-0` with a = 7, c = 7, m = 10, and X0 = 7.
+(let [pairs (->> (repeatedly 1000 lcg-0)
+                 (partition 2))  
+      ds (tc/dataset pairs {:column-names [:x :y]})]
+  (hanami/plot ds
+               hanami/point-chart
+               {:=x :x :=y :y
+                :=mark-size 200}))
 
-;; which is closer than doing 10 trials. So, let's doing 100 trials again a few times
+;; Above is an LCG with a poor parameter because
 
-^:kindly/hide-code (repeatedly 10 #(str "estimated probability for head from 100 trials: " (estimate-head 100)))
+;; 1. The period is short just 4 numbers, just 7,6,9, and 0.
+;; 2. Only 2 pairs generated
 
-;; what happen if we have 10,000 trials
 
-^:kindly/hide-code (repeatedly 5 #(str "estimated probability for head from 10000 trials: " (estimate-head 10000)))
+;; `lcg-1` m = 2^48, c = 11, a = 25214903917, and X0 = 2007. Here we use lcg-rand function so that the x and y axis is small.
+(let [m (Math/pow 2 48)
+      pairs (->> (repeatedly 1000 #(lcg-rand lcg-1 m))
+                 (partition 2))  
+      ds (tc/dataset pairs {:column-names [:x :y]})]
+  (hanami/plot ds
+               hanami/point-chart
+               {:=x :x :=y :y}))
 
-;; Now, the estimates are really close to the true value 50%.
+;; Now, here we see what is called "lattice structure". There's a noticable pattern between a number and the next number in the sequence but for our present purpose, the LCG with above parameters is good enough because:
 
-;; ### Law of Large Numbers
+;; 1. The period length is large enough to get large amount of random numbers.
+;; 2. It shows a reproducible randomness.
+;; 3. The random numbers are evenly distributed between 0 and 1
+;;    If plot histogram the lcg-1 values in x axis between 0 and 1, it should show roughly equal height bars which means that our lcg-1 generates equally distributed random numbers.
+(let [numbers (sort (repeatedly 1000 #(lcg-rand lcg-1 (Math/pow 2 48))))
+      ds (tc/dataset {:x numbers})]
+  (plotly/layer-histogram ds
+                          {:=x :x}))
 
-;; We create the dataset containing the number of experiments and the estimated probability for head from the last chapter. We use tablecloth library to create the dataset.
+;; Now, we have a LCG as our PRNG. We create 2 LCGs each returning same repeatable sequence of random numbers given same initial value X0.
+
+(def lcg-A (make-lcg {:X0 2024 :c 25214903917 :a 11
+                      :m (Math/pow 2 48)}))
+
+(def lcg-B (make-lcg {:X0 2024 :c 25214903917 :a 11
+                      :m (Math/pow 2 48)}))
+
+(repeatedly 5 lcg-A)
+
+(repeatedly 5 lcg-B)
+
+;; Since we can create repeatable random numbers with our LCG, we create a version 2 of our fair-coin-box where the randomness comes from our LCG. This fair-coin-box now optionally accepts a seed which is the X0 from our LCG.
+
+(defn make-fair-coin-box
+  ([]
+   ;; we generate a seed which is rand-int between 1 - 65432
+   (fair-coin-box (rand-int 1 65432)))
+  ([seed]
+   (let [m (Math/pow 2 48)
+         lcg (make-lcg {:X0 seed :c 25214903917 :a 11
+                        :m m})]
+     (fn []
+       (let [tickets [:head :head :head :head :head
+                      :tail :tail :tail :tail :tail]
+             len (count tickets)]
+         (nth tickets
+              (long (* (lcg-rand lcg m) len))))))))
+
+
+;; We create 2 boxes
+(def box-1 (make-fair-coin-box 2007))
+
+(def box-2 (make-fair-coin-box 2007))
+
+;; and run 10 trials
+
+(repeatedly 10 box-1)
+
+(repeatedly 10 box-2)
+
+;; Now we have reproducible results. We can imagine that you say to your colleague "Hey, I have this model that produce an interesting pattern. You can replicate my experiment by supplying the box creation with 2007 as the seed".
+
+;; In practical work, we should use better PRNG. In Clojure ecosystem, we have fastmath library providing pseudo random generation functions. Here we use mersenne twister PRNG. with initial seed 1337
+
+(kind/code "(require '[fastmath.random :as r ])")
+
+;; we create the fastmath's rng
+(def fm-rng (r/rng :mersenne 1337))
+
+;; to generate random number between 0 and 1 we use drandom
+(repeatedly 5 #(r/drandom fm-rng))
+
+(def lcg-3 (make-lcg {:X0 2007 :c 25214903917 :a 11
+                      :m (Math/pow 2 48)}))
+
+(lcg-rand lcg-3 (Math/pow 2 48))
+
+;; let's compare the fastmath mersenne twister rng with our lcg by plotting consecutive random number pair. We use red for our LCG and blue for mersenne-twister PRNG.
+
+(let [m (Math/pow 2 48)
+      lcg-pairs (->> (repeatedly 1000 #(lcg-rand lcg-3 m))
+                     (partition 2))
+      fm-rng-pairs (->> (repeatedly 1000 #(r/drandom fm-rng))
+                        (partition 2))
+      lcg-ds (tc/dataset lcg-pairs {:column-names [:x0 :y0]})
+      fm-rng-ds (tc/dataset fm-rng-pairs {:column-names [:x1 :y1]})
+      ds (-> lcg-ds
+             (tc/add-column :x1 (tc/column fm-rng-ds :x1))
+             (tc/add-column :y1 (tc/column fm-rng-ds :y1)))]
+  (-> ds
+      (hanami/layer-point {:=x :x0 :=y :y0 :=mark-color "red"})
+      (hanami/layer-point {:=x :x1 :=y :y1 :=mark-color "blue"})))
+
+;; We can see that the mersenne-twister PRNG has no discernible pattern.;;
+
+;; ## Law of Large Numbers
+
+
+;; Now we have our `make-fair-coin-box` which returns reproducible results, we're going to estimate the probability of head given n trials.
+
+(def flip-a-coin-box (make-fair-coin-box 1337))
 
 (defn estimate-head-optimized
-  "return probability for :head from n trials"
-  [n]
+  "return probability for :head from n trials of experiment modeled by flip-a-coin-box."
+  [flip-a-coin-box n]
   (let [head-count (loop [i 0
                           count 0]
                      (if (< i n)
@@ -162,31 +320,36 @@
                        count))]
     (double (/ head-count n))))
 
-(let [ns [5 10 100 1000 10000 100000]
-      ps (mapv estimate-head-optimized ns)]
+
+(let [ns [1 2 3 4 5 10 25 50 75 100 500 1000 5000 10000 100000]
+      ps (mapv (partial estimate-head-optimized flip-a-coin-box) ns)]
   (tc/dataset {:n ns :p ps} {:dataset-name "Estimated head probability p from n experiments"}))
 
+;; As we can see, the more we repeat the experiments, the closer we are to the true value of 50%. How many experiments do we need so that we can be confident of our estimation?
 
-;; As we can see, the more we repeat the experiments, the closer we are to the true value of 50%. How many experiments do we need so that we can be confident of our estimation.
+;; We'll visualize this with a plot. We're going to run 1 to 10000 trials and store the result in a dataset.
 
-;; We'll visualize this with a plot. We're going to run 1 to 100,000 experiments and store the result in a dataset.
+(def dataset (tc/dataset {:n (range 1 10001) :p (into [] (pmap (partial estimate-head-optimized flip-a-coin-box) (range 1 10001)))}))
 
-;; (time
-;;  (def dataset (tc/dataset {:n (range 1 100001) :p (into [] (pmap estimate-head-optimized (range 1 100001)))})))
+(-> dataset
+    (hanami/plot hanami/line-chart
+              {:=x :n :=y :p}))
 
-(def dataset (tc/dataset (io/file "test.csv") {:key-fn keyword}))
-
-(def dataset1 (clojure.set/rename-keys dataset {:n :x :p :y}))
-
-(gg/->image (gg/line-plot dataset1))
 
 ;; The plot shows that the larger the number of experiments, the closer our estimation to 50%. We can see it with more clarity if we use logarithmic scale for the x axis.
 
-(gg/->image (gg/line-plot-log-x-scale dataset1))
+(-> dataset
+    (hanami/plot hanami/line-chart
+              {:=x :n :=y :p})
+    (assoc-in [:encoding :x :scale] {:type :log})
+    (update-in [:encoding :x] dissoc :type))
+
 
 ;; We've observed that as we increase the number of coin flips, our estimated probability for getting heads converges towards 0.5 (or 50%). This phenomenon is a practical demonstration of the Law of Large Numbers (LLN), one of the fundamental principles in probability theory and statistics.
 
-;; The Law of Large Numbers states that as we increase the number of trials of an independent experiment, the average of the results tends to converge to true value. So, in our coin-flipping experiment:
+;; *The Law of Large Numbers states that as we increase the number of trials of an independent experiment, the average of the results tends to converge to true value*.
+
+;; So, in our coin-flipping experiment:
 
 ;; 1. Each flip is an independent trial
 ;; 2. The result of each trial is either head or tail
@@ -195,122 +358,46 @@
 ;;    In our case, the average result is the estimated probability of heads.
 ;; 5. As we increase the number of flips, the estimated probability of heads gets closer to 0.5
 
+;; We also can use Law of Large Numbers to estimate the probability of head from a mystery box where we don't know th proportion of heads and tails in the tickets. Here this box creation function accepts additional parameters tickets.
 
-;; ### Central Limit Theorem
+(defn make-mysterious-fair-coin-box
+  [seed tickets]
+  (let [m (Math/pow 2 48)
+         lcg (make-lcg {:X0 seed :c 25214903917 :a 11
+                        :m m})]
+     (fn []
+       (nth tickets
+            (long (* (lcg-rand lcg m) (count tickets)))))))
 
-;; ### More Tickets in a Box Examples
+;; We're going to create the tickets parameter using our lcg. The total number of tickets are 10, at least there's one head or tail ticket.
 
-;; Let's consider eagle sightings observation whose outcome is the number of eagles seen on a particular day. The event could 0 eagles seen, 1 eagle seen, or 7 eagles seen, etc. Using box-model, the box is the experiment and the number written on any tickets could be integers: 0, 1, 2, 3, .. etc. We then pick a ticket from the box, see the number written on the ticket that tells us the number of eagles seen for that particular day.
+(def lcg-m (make-lcg {:X0 1990 :c 25214903917 :a 11
+                      :m (Math/pow 2 48)}))
 
-;; We're going to create the eagle sightings box using Clojure and fastmath library. We want to make a function `eagle-sightings` which simulates the act of picking a ticket from a box and that function returns the outcome or number written on a picked ticket.
+(def unknown-tickets
+  (let [n-head (some #(when (< 0 %)
+                        %) (repeatedly #(long (* 10 (lcg-rand lcg-m (Math/pow 2 48))))) )
+        n-tail (- 10 n-head)]
+    (->> []
+         (into (repeat n-head :head))
+         (into (repeat n-tail :tail)))))
 
-;; For example:
-^:kindly/hide-code (kind/code "(eagle-sightings) => 1 ;; 1 eagle seen")
-^:kindly/hide-code (kind/code "(eagle-sightings) => 5 ;; 5 eagles seen")
+(def mystery-box (make-mysterious-fair-coin-box 1337 unknown-tickets))
 
-;; Since the number returned from the `eagle-sightings` evaluation is completely unknown to use beforehand, we have to make or use some kind of number generator whose resulting number is unpredictable. That number generator is usually called a random number generator. Our programs run on computers which are deterministic so at best we can create or use _pseudo-random number generators_ (or PRNG for short). 
+(def dataset (tc/dataset {:n (range 1 10001) :p (into [] (pmap (partial estimate-head-optimized mystery-box) (range 1 10001)))}))
 
-;; **A Detour to Pseudo-Random Number Generator (PRNG) in fastmath**
+;; We plot the estimation using logarithmic scale
 
-;; _Pseudo-random number generators_, if they are well coded, produce deterministic streams of output that appear to be random.
+(-> dataset
+    (hanami/plot hanami/line-chart
+                 {:=x :n :=y :p})
+    (assoc-in [:encoding :x :scale] {:type :log})
+    (update-in [:encoding :x] dissoc :type))
 
-;; Let's play around with PRNGs using fastmath.
+;; Let's see the proportion of the head tickets
 
-;; include fastmath in deps.edn
-^:kindly/hide-code (kind/code "generateme/fastmath {:mvn/version \"3.0.0-alpha1\"}")
+(/ (double (count (filter #(= % :head) unknown-tickets))) 10)
 
-;; require `fastmath.random`
-^:kindly/hide-code (kind/code "(require '[fastmath.random :as r])")
+;; Our estimation with large amount of trials resulting in a value which is close enough to the proportion of the unknown-tickets.
 
-;; We create a prng with Mersenne-Twister algorithm
-(def prng0 (r/rng :mersenne))
-
-;; In the context of eagle sightings, we use `irandom` function to get a random integer from `prng0` and we limit the sightings at maximum 100 eagles seen.
-
-(r/irandom prng0 0 101)
-
-;; let's take possible numbers from 10 sightings
-
-(repeatedly 10 (fn [] (r/irandom prng0 0 101)))
-
-;; PRNGs produce deterministic streams of output by having some kind of internal state. In Clojure parlance, PRNGs are stateful. During the course of its execution, a PRNG's state follow the same path of changes. We can set the initial state of a PRNG by specifying a state `seed`. Instances of a prng with the same algorithm and the same `seed`, produce identical stream of outputs because those instances are deterministic and start from the same state.
-
-;; Let's create 2 Mersenne-Twister PRNGs with the same `seed` 42.
-(def prng1 (r/rng :mersenne 42))
-(def prng2 (r/rng :mersenne 42))
-
-;; Both yield identical stream of numbers.
-(repeatedly 10 (fn [] (r/irandom prng1 0 101)))
-(repeatedly 10 (fn [] (r/irandom prng2 0 101)))
-
-;; Supplying seed when creating prng is an important part to make our _random_ experiment reproducible.
-
-;; **Back to eagle sightings box model**
-
-;; So, our `eagle-sightings` implementation could be like this
-
-(defn eagle-sightings
-  "return number of eagles seen on a particular day.
-  the number is an integer between from 0 to 100."
-  []
-  (let [rng (r/rng :mersenne)]
-    (r/irandom rng 0 101)))
-
-;; Do 2 experiments
-(eagle-sightings)
-(eagle-sightings)
-
-;; By using this box model implemented through codes and running in our computer, we mimic the experiment done in the real world. We can run this experiment many times and do further analysis to the model. There's still a problem that we haven't shown that this model behave like the real world experiment. We'll tackle that problem further in this tutorial.
-
-;; We can create reproducible model. We can imagine doing experiment with a box and then giving the box to another person. That person will have same sequence of tickets drawn from the box. By using seed, we can ensure the model produce reproducible results. Let's make a `generate-eagle-sightings-box` which given same `seed`, returns reproducible eagle sightings experiment. 
-
-(defn generate-eagle-sightings-box
-  "given `seed` for prng, returns eagle sightings function.
-  The eagle sightings function returns number of eagles seen on a particular day.
-  the number is an integer between from 0 to 100."
-  [seed]
-  (let [rng (r/rng :mersenne seed)]
-    (fn eagle-sightings [] (r/irandom rng 0 101))))
-
-;; generate experiment 1 using 1337 as seed
-(def eagle-sightings-1 (generate-eagle-sightings-box 1337))
-
-;; generate experiment 2 using 1337 as seed
-(def eagle-sightings-2 (generate-eagle-sightings-box 1337))
-
-;; run experiment 1 10 times
-(repeatedly 10 (fn [] (eagle-sightings-1)))
-
-;; run experiment 2 10 times
-(repeatedly 10 (fn [] (eagle-sightings-2)))
-
-;; both return identical results
-
-;; ### Calculating Probability
-
-;; One way to define probability of an event is by counting. Let's take 100,000 tickets from the box, count the occurence of tickets with 7 written on them. The probability of ticket with number 7 is the count of occurrence divided by the total number of tickets picked.
-
-;; Generate a box with seed 1234
-(def eagle-sightings-3 (generate-eagle-sightings-box 1234))
-
-;; A function to calculate probability for a ticket outcome from n trials from a box.
-(defn ticket-probability
-  "given a box, calculate the probability of a ticket outcome from n trials"
-  [box n ticket]
-  (let [c (->> (repeatedly n (fn [] (box)))
-               (filter #(= % ticket))
-               count)]
-    (/ (float c) n)))
-
-;; The probabilities for a 7 ticket outcome from 10 sets of 10 trials
-(repeatedly 10 (fn [] (ticket-probability eagle-sightings-3 10 7)))
-
-;; The 7 tickets rarely occurs, so let's increase the trials to 100
-
-(repeatedly 10 (fn [] (ticket-probability eagle-sightings-3 100 7)))
-
-;; The 7 ticket shows up with varying probabilities. Let's see what 100,000 trials result
-
-(repeatedly 10 (fn [] (ticket-probability eagle-sightings-3 100000 7)))
-
-;; With large amount of trials, the probability for a 7 outcome is about 0.01.
+;; ## Central Limit Theorem
