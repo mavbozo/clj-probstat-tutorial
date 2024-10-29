@@ -31,7 +31,7 @@
 
 ;; From a particular experiment, each `outcome` is unique. An experiment yields an `outcome` for each trial. The set of all possible outcomes of an experiment is the _sample space_ which usually denoted with S or Ω (Greek capital for Omega). So for the coin flip, the S is `#{:head :tail}` and the flip-a-coin-twice experiment, the S or Ω is `#{[:head :tail] [:tail :head] [:tail :tail] [:head :head]}`.
 
-;; Now, we want to know whether tomorrow's maximum temperature will be 34 degrees celcius. The outcomes of the experiment depends on the range and precision of our temperature sensor device. For example, our device has temperature range from -10 to 50 degrees celcius with 0.001 precision. The sample space is `#{-10.000, -10.001, -10.002, ..... , 49.998, 49.999, 50.000}`. Compared to our coin flip experiments above, this maximum temperature experiment's sample space has more number of outcomes. In practical daily life usage, it is enough for us to know the maximum temperature in integer (ex. it's 34 degrees celcius). So, looking at the possible outcomes, we decide that we're interested to know whether tomorrow's maximum temperature is between 33.5 and 34.5 degrees celcius which is a set `#{33.500, 33.501, ..., 34.449, 34.500}`. We're interested in a subset of the outcomes.
+;; Now, we want to know whether tomorrow's maximum temperature will be 34 degrees celcius. The outcome of the experiment depends on the range and precision of our temperature sensor device. For example, our device has temperature range from -10 to 50 degrees celcius with 0.001 precision. The sample space is `#{-10.000, -10.001, -10.002, ..... , 49.998, 49.999, 50.000}`. Compared to our coin flip experiments above, this maximum temperature experiment's sample space has a bigger number of outcomes. In practical daily life usage, it is enough for us to know the maximum temperature in integer (ex. it's 34 degrees celcius). So, looking at the possible outcomes, we decide that we're interested to know whether tomorrow's maximum temperature is between 33.5 and 34.5 degrees celcius which is a set `#{33.500, 33.501, ..., 34.449, 34.500}`. We're interested in a subset of the outcomes.
 
 ;; In probability theory, a subset of outcomes from an experiment is called an `event`. The distinction between `outcome` and `event` is practically useful, especially in experiments with continuous or very large sample spaces.
 
@@ -45,14 +45,14 @@
 
 ;; We can simulate _random_ experiments in our computers. We can, programmatically, create a model of _random_ experiment and run the model simulations in our computer. The model should be small enough to capture relevant aspects of a _random_ experiment we have learned: the outcomes, sample space, events, and probabilities.
 
-;; We will use a tickets-in-a-box model or "box model", for short. The box contains tickets and each ticket has an outcome written on it. The outcome written could be "head" or "tail" from tossing a coin, "win" or "lose" or "draw" from a sports match between 2 teams, or all possible temperature readings from maximum temperatur experiment -- it depends on the random experiment. Every potential outcome is represented on at least one ticket in the box. Certain outcomes might be found on multiple tickets. We can imagine that we shake the box to ensure that the tickets inside are randomly shuffled thus each individual ticket are equally likely to be selected. Doing an experiment means we pick a ticket from the box and then see what is written on the ticket to know the outcome.
+;; We will use a tickets-in-a-box model or "box model", for short. The box contains tickets and each ticket has an outcome written on it. The outcome written could be "head" or "tail" from tossing a coin, "win" or "lose" or "draw" from a sports match between 2 teams, or all possible temperature readings from maximum temperature experiment -- it depends on the random experiment. Every potential outcome is represented on at least one ticket in the box. Certain outcomes might be found on multiple tickets. We can imagine that we shake the box to ensure that the tickets inside are randomly shuffled thus each individual ticket are equally likely to be selected. Doing an experiment means we pick a ticket from the box and then see what is written on the ticket to know the outcome.
 
-;; In this box model, the probability of an outcome is the amount of tickets with that outcome written on them, divided by total amount of all tickets. The proportions of each outcomes written relative to the total number of tickets defines the probability property of a box. An outcome with more written tickets has more probability than other outcomes with lesser tickets. Intuitively, we are more likely to pick a ticket with higher outcome proportion. For example, a box with 7 head tickets and 3 tail tickets has same probability property like a box with 7 millions head tickets and 3 millions tail tickets and we are more likely to pick a head ticket from the box.
+;; In this box model, the probability of an outcome is the amount of tickets with that outcome written on them, divided by total amount of all tickets. The proportions of each outcomes written relative to the total number of tickets defines the probability property of a box. An outcome with more written tickets has a higher probability than other outcomes with lesser tickets. Intuitively, we are more likely to pick a ticket with higher outcome proportion. For example, a box with 7 head tickets and 3 tail tickets has same probability property like a box with 7 millions head tickets and 3 millions tail tickets and we are more likely to pick a head ticket from the box.
 
 ;; Let's create a box for our flip-a-coin experiment. The outcomes are `:head` or `:tail`. We assume we're using fair coin, so the proportions of head and tail are the same. We use 5 tickets for each outcome.
 
 [:head :head :head :head :head
- :tail :tail :tail :tail :tail] 
+ :tail :tail :tail :tail :tail]
 
 ;; Doing the experiment means we properly shake the box then pick a ticket. In our implementation, we use `clojure.core/rand-nth` function to simulate the acts of shuffling the box and pick a random ticket. We also don't remove the ticket from the box collection to simulate the act of putting the picked ticket back to the box. We create a function `fair-coin-box` where calling that function means we shake the box, pick a random ticket, then put the ticket in the box. The return value of the function is the outcome written on a ticket.
 
@@ -166,7 +166,7 @@
 
 (repeatedly 20 lcg-1)
 
-;; The number is too large, we could create another functionlcg-rand whose input is the lcg function and the modulus and returns random number between 0 and 1. We just divides the number returned from lcg with the m.
+;; The number is too large, we could create another function, lcg-rand, whose input is the lcg function and the modulus and returns random number between 0 and 1. We just divides the number returned from lcg with the m.
 
 (defn lcg-rand
   "returns random number between 0 and 1"
