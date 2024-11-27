@@ -1,4 +1,5 @@
 {:clean-up-target-dir true
+ :format [:quarto :html]
  :quarto {:code-block-background true
           :title "Introduction to Probability and Statistics using Clojure"}
  :source-path ["src/index.clj"]
