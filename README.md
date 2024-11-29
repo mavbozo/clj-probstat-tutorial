@@ -6,7 +6,7 @@
 
 See `src/index.clj` for the draft. Use clay to render the pages.
 
-The latest published draft can be read here [https://mavbozo.github.io/clj-probstat-tutorial/clay/](https://mavbozo.github.io/clj-probstat-tutorial/clay/)
+The latest published draft can be read here [https://mavbozo.github.io/clj-probstat-tutorial/](https://mavbozo.github.io/clj-probstat-tutorial/)
 
 ## License
 
