@@ -534,7 +534,7 @@ flip-a-coin-twice-streaks-ds
 ;;    If plot histogram the lcg-1 values in x axis between 0 and 1, it should show roughly equal height bars which means that our lcg-1 generates equally distributed random numbers.
 (let [numbers (sort (repeatedly 1000 #(lcg-rand lcg-1 (Math/pow 2 48))))
       ds (tc/dataset {:x numbers})]
-  (plotly/layer-histogram ds
+  (hanami/layer-histogram ds
                           {:=x :x}))
 
 ;; Now, we have a LCG as our PRNG. We create 2 LCGs each returning same repeatable sequence of random numbers given same initial value X0.
