@@ -6,8 +6,7 @@
    [fastmath.random :as r]
    [scicloj.kindly.v4.kind :as kind]
    [scicloj.tableplot.v1.hanami :as hanami]
-   [tablecloth.api :as tc]
-   [scicloj.tableplot.v1.plotly :as plotly]))
+   [tablecloth.api :as tc]))
 
 ;; ## Foreword
 
@@ -166,7 +165,7 @@
 (defn fast-query? [t] (and (< 0 t) (< t 50)))
 (defn okay-query? [t] (and (<= 50 t) (< t 200)))
 (defn slow-query? [t] (and (<= 200 t) (< t 1000)))
-(defn timeouts? [t] (<= t 1000))
+(defn timeouts? [t] (<= 1000 t))
 
 ;; Since an event is a subset of the sample space, the set of all possible events is the powerset of the sample space. There are a total of 2ⁿ possible events where n is the number of elements in the sample space. In practical applications, we define an _event space_ which contains events which are meaningful for our domain, measurable, and useful for decision making.
 
@@ -241,6 +240,8 @@ flip-a-coin-box-tickets
 
 ;; The proportions of each written outcomes relative to the total number of tickets defines the probability measure function of a box. In our flip-a-coin-box with fair-coin above, it doesn't matter whether we use 2 tickets (1 head, 1 tail), 10 tickets (5 head, 5 tail), or 1 million tickets (500 thousands head and tails ticket), the _P_ assigns same probability numbers for all events.
 
+;; **Probabilities determine boxes** If we know or have guessed the probabilities we want to model, then we have to decide how to fill the boxes with the tickets. In this example, we decided to use a fair-coin which has 50-50% probability for "heads" or "tails" so we fill the box with equal amounts of "heads" and "tails" tickets.
+
 ;; We have sample space, event space, and probability measure function. Now, let's model the experiment. Doing the experiment means we properly shake the box then pick a ticket. The experiment is implemented as `flip-a-coin-box` function where calling that function means we shake the box, pick a random ticket, then put the ticket in the box. The return value of the function is the outcome written on a ticket. In our implementation, we use `clojure.core/rand-nth` function to simulate the acts of shuffling the box and pick a random ticket. We also don't remove the ticket from the box collection to simulate the act of putting the picked ticket back into the box. 
 
 (defn flip-a-coin-box
@@ -252,38 +253,33 @@ flip-a-coin-box-tickets
 ;; For example, this is a result of doing 5 trials of the experiment.
 (repeatedly 5 flip-a-coin-box)
 
-;; Let's do the same for flipping a coin 3 times, a flip-a-coin-thrice experiment using a fair coin. In each ticket there's a written possible sequence, ex: [head, head, tail], [tail, head, tail], etc. In this experiment, each sequence equally likely to occur so we use same amount of tickets for each sequence.
+;; **Combining Boxes** Two or more boxes can be combined.  The simultaneous drawing of tickets from the boxes is the outcome of a single _combined_ experiment.
 
-(def flip-a-coin-thrice-box-tickets
-  (let [sequences (for [t1 [:H :T]
-                        t2 [:H :T]
-                        t3 [:H :T]]
-                    [t1 t2 t3])
-        tickets-per-sequence 5] ;; arbitray number of tickets, here it is 5.
-    (mapcat #(repeat tickets-per-sequence %) sequences)))
+;; We'll combine 3 flip-a-coin-box to model our flipping a coin thrice experiment using a fair coin. The result of simulteneous drawing of a ticket from each box is the result of the experiment.
 
-;; The tickets are
+(defn flip-a-coin-thrice-box
+  "Simulates the act of shuffling and randomly pick a ticket from a box representing random experiment of flipping a coin 3 times. The picked ticket then put back in the box.
+   The output is the outcome of the experiment for example `[:H :H :T]` for a sequence of head, head, tail.
 
-^:kindly/hide-code (kind/code "([:H :H :H]
- [:H :H :H]
- ...
- [:H :H :T]
- [:H :T :H]
- ...
- [:T :H :H]
- [:T :H :H]
- [:T :H :H]
- [:T :H :H]
-")
+  In this implementation, we simultenously draw tickets from 3 flip-a-coin-box-es"
+  []
+  [(flip-a-coin-box) (flip-a-coin-box) (flip-a-coin-box)])
+
+;; An example of 5 repeated trials.
+(repeatedly 5 flip-a-coin-thrice-box)
 
 ;; Here's the probability measure defined for this box.
-
 (defn P-flip-a-coin-thrice-box
   "the probability measure function `P` for flip-a-coin-thrice-box.
   returns probability of an event satisfying event-pred?"
   [event-pred?]
-  (double (/ (count (filter event-pred? flip-a-coin-thrice-box-tickets))
-             (count flip-a-coin-thrice-box-tickets))))
+  (let [flip-a-coin-thrice-box-tickets
+        (for [t1 flip-a-coin-box-tickets
+              t2 flip-a-coin-box-tickets
+              t3 flip-a-coin-box-tickets]
+          [t1 t2 t3])]
+    (double (/ (count (filter event-pred? flip-a-coin-thrice-box-tickets))
+               (count flip-a-coin-thrice-box-tickets)))))
 
 ;; We modified our previous _P_ for flip-a-coin-box so that this implementation accepts a generalized event predicate function. We're not limited to just using sets as event but instead we can use any function to act as predicate to determine whether what's written (outcome) belongs to an event. Rather than enumerating outcomes belonging to an event, we can just create a predicate function like examples below.
 
@@ -306,16 +302,44 @@ flip-a-coin-box-tickets
 ;; The probability of seeing heads occur at least once is:
 (P-flip-a-coin-thrice-box heads-occur-at-least-once?)
 
-;; The act of doing the experiment is represented by this function.
-(defn flip-a-coin-thrice-box
-  "Simulates the act of shuffling and randomly pick a ticket from a box representing random experiment of flipping a coin 3 times. The picked ticket then put back in the box.
-   The output is the outcome of the experiment for example `[:H :H :T]` for a sequence of head, head, tail."
-  []
-  (rand-nth flip-a-coin-thrice-box-tickets))
+;; Now, we are making a box for our database response times experiments. In Probability Space chapter above, the precision of our experiments is 1 ms. Thus, the sample space consists of numbers 1, 2, 3, 4, ... up to 1000 ms and those numbers are written on the tickets. In this box model, we set that each numbers from 1 to 100 are written on 100 tickets each. For the rest of the numbers, we use simple decaying function `tickets = 100 * (1/n)` to determine the number of tickes for each of them.
 
-;; An example of 5 repeated trials.
+(defn make-db-response-time-box-tickets
+  [max-time]
+  (let [ ;; 100 tickets each for 1-100ms
+        fast-tickets (mapcat #(repeat 100 %) (range 1 101))
+        ;; Decreasing tickets for 101-1000ms
+        ;; Using simple decay: tickets = 100 * (1/n) rounded up
+        slower-tickets (mapcat #(repeat (Math/ceil (/ 10000 %)) %)
+                               (range 101 (inc max-time)))]
+    (->> [] (into fast-tickets) (into slower-tickets))))
 
-(repeatedly 5 flip-a-coin-thrice-box)
+;; We create the tickets written with the numbers from 1 - 1000.
+
+(def db-resp-times-tickets (make-db-response-time-box-tickets 1000))
+
+;; This is the histogram of the numbers written on the tickets.
+
+(-> (tc/dataset {:tickets db-resp-times-tickets})
+    (hanami/layer-histogram {:=x :tickets})
+    (assoc :title "Histogram of Tickets Count"))
+
+;; The probability measure function just accepts the event predicate function as input and we simply divide the number of tickets that satisfy the predicate with the count of all tickets.
+
+(defn P-db-resp-times
+  [event-pred?]
+  (double (/ (count (filter event-pred? db-resp-times-tickets))
+             (count db-resp-times-tickets))))
+
+;; Using our defined event space, the probability all events is:
+{:fast (P-db-resp-times fast-query?)
+ :okay (P-db-resp-times okay-query?)
+ :slow (P-db-resp-times slow-query?)
+ :timeout (P-db-resp-times timeouts?)}
+
+;; **Boxes determine probabilities** The number and the composition of the amount of tickets depicting various outcomes determine the probabilities of events.
+
+;; In our database response time experiment box, we decided the amount of tickets to create for each range of outcomes. The probability for events returned from the measure function follows from the composition of the created tickets we put in the box.
 
 ;; ## Independence
 
@@ -392,7 +416,7 @@ flip-a-coin-twice-streaks-ds
 
 ;; ## Pseudo-Random Generators (PRNGs)
 
-;; Imagine that you have a fair-coin and after doing an experiment by flipping the coin 10 times, you believe you have found a fascinating pattern. You tell your colleague, "Hey, I flipped this coin 10 times and got this fascinating pattern!". But, when your colleague replicate your experiment, they get completely different result. How can they verify your experiment? In game development, we might develop a gameplay with random elements and we encounter a bug. Without reproducibility randomness, it would be nearly impossible for other developers to recreate and fix the problems.
+;; Imagine that you have a fair-coin and after doing an experiment by flipping the coin 10 times, you believe you have found a fascinating pattern. You tell your colleague, "Hey, I flipped this coin 10 times and got this fascinating pattern!". But, when your colleague replicate your experiment, they get completely different result. How can they verify your experiment? In game development, we might develop a gameplay with random elements and we encounter a bug. Without reproducibile randomness, it would be nearly impossible for other developers to recreate and fix the problems.
 
 ;; Let's go back to our `flip-a-coin-box` function implementation above.
 
@@ -588,4 +612,3 @@ flip-a-coin-twice-streaks-ds
       (hanami/layer-point {:=x :x1 :=y :y1 :=mark-color "blue"})))
 
 ;; We can see that the mersenne-twister PRNG has no discernible pattern.;;
-
