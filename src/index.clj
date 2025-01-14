@@ -41,11 +41,21 @@
 
 ;; # Probability
 
-;; In our daily lives, we often encounter situations where we don't know what will happen. Some of these situations can have a significant impact on our lives, while others simply spark our curiosity or provide us with a sense of excitement and anticipation. For example, during the rainy season, we might wonder if tomorrow's weather will leave us soaked, prompting us to prepare an umbrella beforehand. Similarly, hoping for our favorite sports team to win a game can fill us with eager anticipation. In our jobs as programmers, we may need to estimate the maximum requests per second our service can handle during peak hours so that we can allocate resources accordingly.
+;; During the course of our personal or professional lives, we are curious about uncertain future situations. Some uncertain future situations might have a significant impact on our experience, while others give us a sense of wonder, excitement, or anticipation. For example, before leaving our house, we check a weather app for the possibility of rain because we don't want to get soaked. Hoping for our favorite sport team to win the next weekend match brings us a sense of excitement. In our jobs as programmers, we may need to estimate the maximum requests per second our service can handle during peak hours so that we can allocate resources accordingly.
 
-;; In probability and statistics, we refer to the act of witnessing or measuring these uncertain situations as an _experiment_ or an _observation_. An experiment is considered random when we cannot predict the outcome with certainty. In contrast, a deterministic experiment is one where the result can be predicted with near certainty, such as evaluating the expression (+ 3 4) in Clojure, which will always return 7.
+;; In probability and statistics, we refer to the act of witnessing or measuring the uncertain future situations as an _experiment_ or an _observation_. More precisely, we refer to the experiment as a _random_ experiment, where we can not decide on the result of the experiment with near certainty--we can not truly decide whether there will be rain tomorrow. A _deterministic_ experiment, in contrast, is an experiment where we can decide the result with near certainty--evaluating the expression (+ 3 4) in Clojure, always returns 7.
 
 ;; Probability of these uncertain situations are scaled between 0% and 100%. The higher the probability, the more likely a situation to occur. A weather report telling us there's a 80% probability of raining tomorrow make us more ready to bring an umbrella tomorrow compared to report telling us 30% probability of raining. Similarly, a 80% chance for our local sports team to win might bring us a sense of calm when watching them play compared to cautious feeling if the probability of winning is just 30%.
+
+;; ## Tickets in a Box Model
+
+;; I use tickets-in-a-box model--or box-model for short, as a main approach to explain concepts in probability and statistics. In this box-model approach, we replace a _random_ experiment with a box filled with tickets and we obtain the result of a _random_ experiment by drawing a ticket from that box. When I encountered this box-model and tried to use this to as a way to understand basic concepts in probability and statistics, I was surprised by how simple the model is in capturing essentials properties of the subjects.
+
+;; These are the rules when replacing a _random_ experiment with a tickets-in-a-box model:
+
+;; 1. The box contains at least 1 ticket
+;; 2. A possible result is written on at least 1 ticket
+;; 3. The tickets in the box are thoroughly mixed (for example, by shaking the box)
 
 ;; ## Probability Space
 
